@@ -4,6 +4,7 @@ import NavBar from "@/components/NavBar";
 import SuccessToast from "@/components/SuccessToast";
 import LogoutButton from "@/components/LogoutButton";
 import PaymentForm from "@/components/PaymentForm";
+import AddCoffeeButton from "@/components/AddCoffeeButton";
 import { Suspense } from "react";
 
 export default async function HomePage() {
@@ -157,6 +158,9 @@ export default async function HomePage() {
 
         {/* Payment form */}
         <PaymentForm userId={user.id} />
+
+        {/* Manual +1 button */}
+        <AddCoffeeButton />
 
         {/* Scan instruction */}
         <div className="mt-4 bg-amber-100 rounded-xl p-4 text-center">

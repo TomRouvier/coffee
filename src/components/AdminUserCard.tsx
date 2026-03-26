@@ -5,6 +5,7 @@ import {
   recordPayment,
   resetUserCoffees,
   deleteUser,
+  setUserCoffeeCount,
 } from "@/app/admin/actions";
 
 interface UserStats {
@@ -24,8 +25,10 @@ export default function AdminUserCard({
   coffeePrice?: number;
 }) {
   const [amount, setAmount] = useState("");
+  const [coffeeCount, setCoffeeCount] = useState(String(user.totalCount));
   const [loading, setLoading] = useState("");
   const [showPayment, setShowPayment] = useState(false);
+  const [showSetCount, setShowSetCount] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
@@ -65,6 +68,14 @@ export default function AdminUserCard({
       setTimeout(() => setError(""), 3000);
     }
     setConfirmDelete(false);
+    setLoading("");
+  }
+
+  async function handleSetCount(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading("count");
+    await setUserCoffeeCount(user.id, coffeeCount);
+    setShowSetCount(false);
     setLoading("");
   }
 
@@ -123,6 +134,41 @@ export default function AdminUserCard({
           <button
             type="button"
             onClick={() => setShowPayment(false)}
+            className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm"
+          >
+            X
+          </button>
+        </form>
+      )}
+
+      {/* Set total count */}
+      {!showSetCount ? (
+        <button
+          onClick={() => setShowSetCount(true)}
+          className="mt-2 w-full py-2 bg-amber-50 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors"
+        >
+          Modifier le total de cafes
+        </button>
+      ) : (
+        <form onSubmit={handleSetCount} className="mt-2 flex gap-2">
+          <input
+            type="number"
+            min="0"
+            value={coffeeCount}
+            onChange={(e) => setCoffeeCount(e.target.value)}
+            autoFocus
+            className="flex-1 px-3 py-2 rounded-lg border border-amber-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+          <button
+            type="submit"
+            disabled={loading === "count"}
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"
+          >
+            {loading === "count" ? "..." : "OK"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSetCount(false)}
             className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm"
           >
             X

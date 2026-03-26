@@ -99,6 +99,47 @@ export async function resetUserCoffees(userId: string) {
   return { success: true };
 }
 
+export async function setUserCoffeeCount(userId: string, count: string) {
+  const admin = await verifyAdmin();
+  if (!admin) return { error: "Non autorise" };
+
+  const numCount = parseInt(count);
+  if (isNaN(numCount) || numCount < 0) return { error: "Nombre invalide" };
+
+  const supabase = createClient();
+
+  // Get current count
+  const { data: currentCoffees } = await supabase
+    .from("coffees")
+    .select("id")
+    .eq("user_id", userId);
+
+  const currentCount = currentCoffees?.length || 0;
+
+  if (numCount > currentCount) {
+    // Add missing coffees
+    const toAdd = numCount - currentCount;
+    const rows = Array.from({ length: toAdd }, () => ({ user_id: userId }));
+    await supabase.from("coffees").insert(rows);
+  } else if (numCount < currentCount) {
+    // Remove excess coffees (delete oldest first)
+    const toRemove = currentCount - numCount;
+    const { data: oldest } = await supabase
+      .from("coffees")
+      .select("id")
+      .eq("user_id", userId)
+      .order("scanned_at", { ascending: true })
+      .limit(toRemove);
+    if (oldest && oldest.length > 0) {
+      const ids = oldest.map((c) => c.id);
+      await supabase.from("coffees").delete().in("id", ids);
+    }
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
 export async function deleteUser(userId: string) {
   const admin = await verifyAdmin();
   if (!admin) return { error: "Non autorise" };

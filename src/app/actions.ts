@@ -24,3 +24,20 @@ export async function recordOwnPayment(amount: string) {
   revalidatePath("/");
   return { success: true };
 }
+
+export async function addManualCoffee() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Non authentifie" };
+
+  const { error } = await supabase
+    .from("coffees")
+    .insert({ user_id: user.id });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  return { success: true };
+}
