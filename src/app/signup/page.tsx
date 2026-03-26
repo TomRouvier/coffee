@@ -26,6 +26,13 @@ function SignupForm() {
       return;
     }
 
+    const emailLower = email.toLowerCase();
+    if (!emailLower.endsWith("@autajon.com") && !emailLower.endsWith("@autajon.int")) {
+      setError("Seules les adresses @autajon.com et @autajon.int sont autorisées");
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
     const { error } = await supabase.auth.signUp({
       email,
