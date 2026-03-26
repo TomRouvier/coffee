@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { recordPayment } from "@/app/admin/actions";
+import {
+  recordPayment,
+  resetUserCoffees,
+  deleteUser,
+} from "@/app/admin/actions";
 
 interface UserStats {
   id: string;
@@ -20,17 +24,48 @@ export default function AdminUserCard({
   coffeePrice?: number;
 }) {
   const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState("");
   const [showPayment, setShowPayment] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState("");
 
   async function handlePayment(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) return;
-    setLoading(true);
+    setLoading("payment");
     await recordPayment(user.id, amount);
     setAmount("");
     setShowPayment(false);
-    setLoading(false);
+    setLoading("");
+  }
+
+  async function handleReset() {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      setConfirmDelete(false);
+      return;
+    }
+    setLoading("reset");
+    await resetUserCoffees(user.id);
+    setConfirmReset(false);
+    setLoading("");
+  }
+
+  async function handleDelete() {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      setConfirmReset(false);
+      return;
+    }
+    setLoading("delete");
+    const result = await deleteUser(user.id);
+    if (result.error) {
+      setError(result.error);
+      setTimeout(() => setError(""), 3000);
+    }
+    setConfirmDelete(false);
+    setLoading("");
   }
 
   return (
@@ -51,6 +86,12 @@ export default function AdminUserCard({
           </p>
         </div>
       </div>
+
+      {error && (
+        <p className="mt-2 text-xs text-red-600 bg-red-50 px-3 py-1 rounded">
+          {error}
+        </p>
+      )}
 
       {/* Payment toggle */}
       {!showPayment ? (
@@ -74,10 +115,10 @@ export default function AdminUserCard({
           />
           <button
             type="submit"
-            disabled={loading || !amount}
+            disabled={loading === "payment" || !amount}
             className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? "..." : "OK"}
+            {loading === "payment" ? "..." : "OK"}
           </button>
           <button
             type="button"
@@ -88,6 +129,42 @@ export default function AdminUserCard({
           </button>
         </form>
       )}
+
+      {/* Admin actions */}
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={handleReset}
+          onBlur={() => setConfirmReset(false)}
+          disabled={loading === "reset" || user.totalCount === 0}
+          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+            confirmReset
+              ? "bg-orange-500 text-white"
+              : "bg-orange-50 text-orange-600 hover:bg-orange-100"
+          } disabled:opacity-30`}
+        >
+          {loading === "reset"
+            ? "..."
+            : confirmReset
+              ? "Confirmer le reset ?"
+              : "Remettre a zero"}
+        </button>
+        <button
+          onClick={handleDelete}
+          onBlur={() => setConfirmDelete(false)}
+          disabled={loading === "delete"}
+          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+            confirmDelete
+              ? "bg-red-600 text-white"
+              : "bg-red-50 text-red-600 hover:bg-red-100"
+          } disabled:opacity-30`}
+        >
+          {loading === "delete"
+            ? "..."
+            : confirmDelete
+              ? "Confirmer suppression ?"
+              : "Supprimer"}
+        </button>
+      </div>
     </div>
   );
 }
