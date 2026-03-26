@@ -46,13 +46,13 @@ export async function GET(request: Request) {
     });
   }
 
-  // Anti-double-scan: check last 30 seconds
-  const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
+  // Anti-double-scan: check last 5 seconds
+  const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
   const { data: recent } = await supabase
     .from("coffees")
     .select("id")
     .eq("user_id", user.id)
-    .gte("scanned_at", thirtySecondsAgo)
+    .gte("scanned_at", fiveSecondsAgo)
     .limit(1);
 
   let toast = "success";
