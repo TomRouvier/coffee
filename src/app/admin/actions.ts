@@ -32,6 +32,32 @@ export async function updateCoffeePrice(price: string) {
   return { success: true };
 }
 
+export async function updatePaymentInfo(info: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Non authentifie" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+  if (!profile?.is_admin) return { error: "Non autorise" };
+
+  // Upsert the payment_info setting
+  const { error } = await supabase
+    .from("settings")
+    .upsert({ key: "payment_info", value: info }, { onConflict: "key" });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { success: true };
+}
+
 export async function recordPayment(userId: string, amount: string) {
   const supabase = createClient();
   const {

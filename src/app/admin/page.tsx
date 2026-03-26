@@ -2,17 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import NavBar from "@/components/NavBar";
 import AdminUserCard from "@/components/AdminUserCard";
 import CoffeePriceForm from "@/components/CoffeePriceForm";
+import PaymentInfoForm from "@/components/PaymentInfoForm";
 
 export default async function AdminPage() {
   const supabase = createClient();
 
   // Fetch everything in parallel
-  const [priceRes, profilesRes, coffeesRes, paymentsRes] = await Promise.all([
+  const [priceRes, paymentInfoRes, profilesRes, coffeesRes, paymentsRes] = await Promise.all([
     supabase.from("settings").select("value").eq("key", "coffee_price").single(),
+    supabase.from("settings").select("value").eq("key", "payment_info").single(),
     supabase.from("profiles").select("id, display_name, created_at").order("display_name"),
     supabase.from("coffees").select("user_id, scanned_at"),
     supabase.from("payments").select("user_id, amount"),
   ]);
+
+  const paymentInfo = paymentInfoRes.data?.value || "";
 
   const coffeePrice = parseFloat(priceRes.data?.value || "0.50");
   const profiles = profilesRes.data || [];
@@ -64,6 +68,7 @@ export default async function AdminPage() {
 
       <div className="max-w-md mx-auto px-4 mt-4 space-y-4">
         <CoffeePriceForm currentPrice={coffeePrice} />
+        <PaymentInfoForm currentInfo={paymentInfo} />
 
         <div className="bg-white rounded-xl shadow p-4">
           <div className="grid grid-cols-3 gap-2 text-center">

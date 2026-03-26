@@ -17,7 +17,7 @@ export default async function HomePage() {
   }
 
   // Fetch everything in parallel (1 round trip instead of 6)
-  const [profileRes, priceRes, coffeesRes, paymentsRes] = await Promise.all([
+  const [profileRes, priceRes, paymentInfoRes, coffeesRes, paymentsRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("display_name, is_admin")
@@ -29,6 +29,11 @@ export default async function HomePage() {
       .eq("key", "coffee_price")
       .single(),
     supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "payment_info")
+      .single(),
+    supabase
       .from("coffees")
       .select("scanned_at")
       .eq("user_id", user.id),
@@ -37,6 +42,8 @@ export default async function HomePage() {
       .select("amount")
       .eq("user_id", user.id),
   ]);
+
+  const paymentInfo = paymentInfoRes.data?.value || "";
 
   const profile = profileRes.data;
   const displayName = profile?.display_name || user.email;
@@ -139,6 +146,14 @@ export default async function HomePage() {
             Prix du cafe : {coffeePrice.toFixed(2)}€
           </p>
         </div>
+
+        {/* Payment info */}
+        {paymentInfo && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mt-4 text-center">
+            <p className="text-xs text-green-600 font-medium mb-1">Comment payer</p>
+            <p className="text-sm text-green-800 whitespace-pre-line">{paymentInfo}</p>
+          </div>
+        )}
 
         {/* Payment form */}
         <PaymentForm userId={user.id} />
