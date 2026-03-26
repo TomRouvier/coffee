@@ -17,11 +17,22 @@ export default async function StatsPage({
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, is_admin")
-    .eq("id", user.id)
-    .single();
+  // Fetch profile and coffees in parallel
+  const [profileRes, coffeesRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("display_name, is_admin")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("coffees")
+      .select("scanned_at")
+      .eq("user_id", user.id)
+      .order("scanned_at", { ascending: false }),
+  ]);
+
+  const profile = profileRes.data;
+  const allCoffees = coffeesRes.data || [];
 
   const now = new Date();
   const selectedYear = parseInt(searchParams.year || String(now.getFullYear()));
@@ -29,7 +40,7 @@ export default async function StatsPage({
     ? parseInt(searchParams.month)
     : null;
 
-  // Build date range
+  // Filter in JS instead of extra DB query
   let startDate: Date;
   let endDate: Date;
 
@@ -41,20 +52,15 @@ export default async function StatsPage({
     endDate = new Date(selectedYear + 1, 0, 1);
   }
 
-  // Get coffees in range
-  const { data: coffees } = await supabase
-    .from("coffees")
-    .select("scanned_at")
-    .eq("user_id", user.id)
-    .gte("scanned_at", startDate.toISOString())
-    .lt("scanned_at", endDate.toISOString())
-    .order("scanned_at", { ascending: false });
+  const coffees = allCoffees.filter((c) => {
+    const d = new Date(c.scanned_at);
+    return d >= startDate && d < endDate;
+  });
 
-  const totalInRange = coffees?.length || 0;
+  const totalInRange = coffees.length;
 
-  // Group by day or month
   const grouped: Record<string, number> = {};
-  coffees?.forEach((c) => {
+  coffees.forEach((c) => {
     const date = new Date(c.scanned_at);
     const key =
       selectedMonth !== null
@@ -64,18 +70,8 @@ export default async function StatsPage({
   });
 
   const monthNames = [
-    "Janvier",
-    "Fevrier",
-    "Mars",
-    "Avril",
-    "Mai",
-    "Juin",
-    "Juillet",
-    "Aout",
-    "Septembre",
-    "Octobre",
-    "Novembre",
-    "Decembre",
+    "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
+    "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre",
   ];
 
   const periodLabel = selectedMonth
@@ -97,7 +93,6 @@ export default async function StatsPage({
           monthNames={monthNames}
         />
 
-        {/* Summary */}
         <div className="bg-white rounded-2xl shadow-lg p-6 text-center mt-4">
           <p className="text-amber-600 text-sm font-medium">{periodLabel}</p>
           <div className="text-5xl font-bold text-amber-900 my-2">
@@ -108,7 +103,6 @@ export default async function StatsPage({
           </p>
         </div>
 
-        {/* Breakdown */}
         {Object.keys(grouped).length > 0 && (
           <div className="bg-white rounded-xl shadow p-4 mt-4">
             <h3 className="text-amber-800 font-semibold text-sm mb-3">

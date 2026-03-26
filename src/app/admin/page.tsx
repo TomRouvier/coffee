@@ -6,59 +6,44 @@ import CoffeePriceForm from "@/components/CoffeePriceForm";
 export default async function AdminPage() {
   const supabase = createClient();
 
-  // Get coffee price
-  const { data: priceSetting } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "coffee_price")
-    .single();
-  const coffeePrice = parseFloat(priceSetting?.value || "0.50");
+  // Fetch everything in parallel
+  const [priceRes, profilesRes, coffeesRes, paymentsRes] = await Promise.all([
+    supabase.from("settings").select("value").eq("key", "coffee_price").single(),
+    supabase.from("profiles").select("id, display_name, created_at").order("display_name"),
+    supabase.from("coffees").select("user_id, scanned_at"),
+    supabase.from("payments").select("user_id, amount"),
+  ]);
 
-  // Get all profiles
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, display_name, created_at")
-    .order("display_name");
+  const coffeePrice = parseFloat(priceRes.data?.value || "0.50");
+  const profiles = profilesRes.data || [];
+  const coffees = coffeesRes.data || [];
+  const payments = paymentsRes.data || [];
 
-  // Get all coffees
-  const { data: coffees } = await supabase
-    .from("coffees")
-    .select("user_id, scanned_at");
-
-  // Get all payments
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("user_id, amount");
-
-  // Compute stats per user
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const userStats =
-    profiles?.map((profile) => {
-      const userCoffees =
-        coffees?.filter((c) => c.user_id === profile.id) || [];
-      const monthCoffees = userCoffees.filter(
-        (c) => new Date(c.scanned_at) >= monthStart
-      );
-      const userPayments =
-        payments?.filter((p) => p.user_id === profile.id) || [];
-      const totalPaid = userPayments.reduce(
-        (sum, p) => sum + parseFloat(String(p.amount)),
-        0
-      );
-      const totalOwed = userCoffees.length * coffeePrice;
+  const userStats = profiles.map((profile) => {
+    const userCoffees = coffees.filter((c) => c.user_id === profile.id);
+    const monthCoffees = userCoffees.filter(
+      (c) => new Date(c.scanned_at) >= monthStart
+    );
+    const userPayments = payments.filter((p) => p.user_id === profile.id);
+    const totalPaid = userPayments.reduce(
+      (sum, p) => sum + parseFloat(String(p.amount)),
+      0
+    );
+    const totalOwed = userCoffees.length * coffeePrice;
 
-      return {
-        id: profile.id,
-        displayName: profile.display_name,
-        totalCount: userCoffees.length,
-        monthCount: monthCoffees.length,
-        totalPaid,
-        totalOwed,
-        balance: totalPaid - totalOwed,
-      };
-    }) || [];
+    return {
+      id: profile.id,
+      displayName: profile.display_name,
+      totalCount: userCoffees.length,
+      monthCount: monthCoffees.length,
+      totalPaid,
+      totalOwed,
+      balance: totalPaid - totalOwed,
+    };
+  });
 
   userStats.sort((a, b) => b.totalCount - a.totalCount);
 
@@ -78,10 +63,8 @@ export default async function AdminPage() {
       </div>
 
       <div className="max-w-md mx-auto px-4 mt-4 space-y-4">
-        {/* Coffee price setting */}
         <CoffeePriceForm currentPrice={coffeePrice} />
 
-        {/* Global summary */}
         <div className="bg-white rounded-xl shadow p-4">
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
@@ -107,7 +90,6 @@ export default async function AdminPage() {
           </div>
         </div>
 
-        {/* User list */}
         {userStats.map((user) => (
           <AdminUserCard
             key={user.id}

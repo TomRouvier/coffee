@@ -16,58 +16,52 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  // Get profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, is_admin")
-    .eq("id", user.id)
-    .single();
+  // Fetch everything in parallel (1 round trip instead of 6)
+  const [profileRes, priceRes, coffeesRes, paymentsRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("display_name, is_admin")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "coffee_price")
+      .single(),
+    supabase
+      .from("coffees")
+      .select("scanned_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("payments")
+      .select("amount")
+      .eq("user_id", user.id),
+  ]);
 
+  const profile = profileRes.data;
   const displayName = profile?.display_name || user.email;
   const isAdmin = profile?.is_admin || false;
+  const coffeePrice = parseFloat(priceRes.data?.value || "0.50");
 
-  // Get coffee price
-  const { data: priceSetting } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "coffee_price")
-    .single();
-  const coffeePrice = parseFloat(priceSetting?.value || "0.50");
+  // Compute counts from the single coffees query
+  const allCoffees = coffeesRes.data || [];
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Get today's count
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const { count: todayCount } = await supabase
-    .from("coffees")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("scanned_at", today.toISOString());
+  const todayCount = allCoffees.filter(
+    (c) => new Date(c.scanned_at) >= todayStart
+  ).length;
+  const monthCount = allCoffees.filter(
+    (c) => new Date(c.scanned_at) >= monthStart
+  ).length;
+  const totalCount = allCoffees.length;
 
-  // Get this month's count
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const { count: monthCount } = await supabase
-    .from("coffees")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("scanned_at", monthStart.toISOString());
-
-  // Get total count
-  const { count: totalCount } = await supabase
-    .from("coffees")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  // Get total paid
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("amount")
-    .eq("user_id", user.id);
-  const totalPaid = (payments || []).reduce(
+  const totalPaid = (paymentsRes.data || []).reduce(
     (sum, p) => sum + parseFloat(String(p.amount)),
     0
   );
-
-  const totalOwed = (totalCount || 0) * coffeePrice;
+  const totalOwed = totalCount * coffeePrice;
   const balance = totalPaid - totalOwed;
 
   return (
@@ -94,10 +88,10 @@ export default async function HomePage() {
             Aujourd&apos;hui
           </p>
           <div className="text-6xl font-bold text-amber-900 my-2">
-            {todayCount || 0}
+            {todayCount}
           </div>
           <p className="text-amber-600 text-sm">
-            {(todayCount || 0) <= 1 ? "cafe" : "cafes"}
+            {todayCount <= 1 ? "cafe" : "cafes"}
           </p>
         </div>
 
@@ -106,13 +100,13 @@ export default async function HomePage() {
           <div className="bg-white rounded-xl shadow p-4 text-center">
             <p className="text-amber-500 text-xs font-medium">Ce mois</p>
             <p className="text-3xl font-bold text-amber-800 mt-1">
-              {monthCount || 0}
+              {monthCount}
             </p>
           </div>
           <div className="bg-white rounded-xl shadow p-4 text-center">
             <p className="text-amber-500 text-xs font-medium">Total</p>
             <p className="text-3xl font-bold text-amber-800 mt-1">
-              {totalCount || 0}
+              {totalCount}
             </p>
           </div>
         </div>
