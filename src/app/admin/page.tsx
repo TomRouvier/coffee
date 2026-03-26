@@ -1,9 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import NavBar from "@/components/NavBar";
 import AdminUserCard from "@/components/AdminUserCard";
+import CoffeePriceForm from "@/components/CoffeePriceForm";
 
 export default async function AdminPage() {
   const supabase = createClient();
+
+  // Get coffee price
+  const { data: priceSetting } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", "coffee_price")
+    .single();
+  const coffeePrice = parseFloat(priceSetting?.value || "0.50");
 
   // Get all profiles
   const { data: profiles } = await supabase
@@ -11,10 +20,15 @@ export default async function AdminPage() {
     .select("id, display_name, created_at")
     .order("display_name");
 
-  // Get all coffees grouped by user
+  // Get all coffees
   const { data: coffees } = await supabase
     .from("coffees")
     .select("user_id, scanned_at");
+
+  // Get all payments
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("user_id, amount");
 
   // Compute stats per user
   const now = new Date();
@@ -27,19 +41,30 @@ export default async function AdminPage() {
       const monthCoffees = userCoffees.filter(
         (c) => new Date(c.scanned_at) >= monthStart
       );
+      const userPayments =
+        payments?.filter((p) => p.user_id === profile.id) || [];
+      const totalPaid = userPayments.reduce(
+        (sum, p) => sum + parseFloat(String(p.amount)),
+        0
+      );
+      const totalOwed = userCoffees.length * coffeePrice;
 
       return {
         id: profile.id,
         displayName: profile.display_name,
         totalCount: userCoffees.length,
         monthCount: monthCoffees.length,
+        totalPaid,
+        totalOwed,
+        balance: totalPaid - totalOwed,
       };
     }) || [];
 
-  // Sort by total descending
   userStats.sort((a, b) => b.totalCount - a.totalCount);
 
-  const totalAllUsers = userStats.reduce((s, u) => s + u.totalCount, 0);
+  const totalAllCoffees = userStats.reduce((s, u) => s + u.totalCount, 0);
+  const totalAllOwed = userStats.reduce((s, u) => s + u.totalOwed, 0);
+  const totalAllPaid = userStats.reduce((s, u) => s + u.totalPaid, 0);
 
   return (
     <div className="min-h-screen bg-amber-50 pb-20">
@@ -47,15 +72,48 @@ export default async function AdminPage() {
         <div className="max-w-md mx-auto">
           <h1 className="text-2xl font-bold">Administration</h1>
           <p className="text-amber-200 text-sm mt-1">
-            {userStats.length} utilisateurs &middot; {totalAllUsers} cafes au
-            total
+            {userStats.length} utilisateurs &middot; {totalAllCoffees} cafes
           </p>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 mt-4 space-y-3">
+      <div className="max-w-md mx-auto px-4 mt-4 space-y-4">
+        {/* Coffee price setting */}
+        <CoffeePriceForm currentPrice={coffeePrice} />
+
+        {/* Global summary */}
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-xs text-amber-500">Total du</p>
+              <p className="text-lg font-bold text-red-600">
+                {totalAllOwed.toFixed(2)}€
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-amber-500">Total paye</p>
+              <p className="text-lg font-bold text-green-600">
+                {totalAllPaid.toFixed(2)}€
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-amber-500">Solde</p>
+              <p
+                className={`text-lg font-bold ${totalAllPaid - totalAllOwed >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
+                {(totalAllPaid - totalAllOwed).toFixed(2)}€
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* User list */}
         {userStats.map((user) => (
-          <AdminUserCard key={user.id} user={user} />
+          <AdminUserCard
+            key={user.id}
+            user={user}
+            coffeePrice={coffeePrice}
+          />
         ))}
 
         {userStats.length === 0 && (
