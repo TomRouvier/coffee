@@ -9,6 +9,7 @@ export default function NavBar({ isAdmin }: { isAdmin?: boolean }) {
   const links = [
     { href: "/", label: "Accueil", icon: "☕" },
     { href: "/stats", label: "Stats", icon: "📊" },
+    { href: "/settings", label: "Parametres", icon: "🔧" },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: "⚙️" }] : []),
   ];
 

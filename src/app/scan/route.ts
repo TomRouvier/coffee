@@ -60,9 +60,16 @@ export async function GET(request: Request) {
   if (recent && recent.length > 0) {
     toast = "already";
   } else {
+    const { data: priceData } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "coffee_price")
+      .single();
+    const coffeePrice = parseFloat(priceData?.value || "0.50");
+
     const { error } = await supabase
       .from("coffees")
-      .insert({ user_id: user.id });
+      .insert({ user_id: user.id, price: coffeePrice });
     if (error) toast = "error";
   }
 

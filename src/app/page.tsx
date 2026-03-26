@@ -36,7 +36,7 @@ export default async function HomePage() {
       .single(),
     supabase
       .from("coffees")
-      .select("scanned_at")
+      .select("scanned_at, price")
       .eq("user_id", user.id),
     supabase
       .from("payments")
@@ -69,7 +69,10 @@ export default async function HomePage() {
     (sum, p) => sum + parseFloat(String(p.amount)),
     0
   );
-  const totalOwed = totalCount * coffeePrice;
+  const totalOwed = allCoffees.reduce(
+    (sum, c) => sum + parseFloat(String(c.price)),
+    0
+  );
   const balance = totalPaid - totalOwed;
 
   return (

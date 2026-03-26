@@ -47,6 +47,9 @@ export default function CoffeePriceForm({
       >
         {saved ? "OK !" : loading ? "..." : "Modifier"}
       </button>
+      <p className="text-[10px] text-amber-400 w-full text-center mt-1">
+        Le nouveau prix s&apos;appliquera aux prochains cafes uniquement.
+      </p>
     </form>
   );
 }

@@ -118,8 +118,18 @@ export async function setUserCoffeeCount(userId: string, count: string) {
 
   if (numCount > currentCount) {
     // Add missing coffees
+    const { data: priceData } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "coffee_price")
+      .single();
+    const coffeePrice = parseFloat(priceData?.value || "0.50");
+
     const toAdd = numCount - currentCount;
-    const rows = Array.from({ length: toAdd }, () => ({ user_id: userId }));
+    const rows = Array.from({ length: toAdd }, () => ({
+      user_id: userId,
+      price: coffeePrice,
+    }));
     await supabase.from("coffees").insert(rows);
   } else if (numCount < currentCount) {
     // Remove excess coffees (delete oldest first)

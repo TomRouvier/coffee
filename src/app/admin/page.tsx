@@ -12,7 +12,7 @@ export default async function AdminPage() {
     supabase.from("settings").select("value").eq("key", "coffee_price").single(),
     supabase.from("settings").select("value").eq("key", "payment_info").single(),
     supabase.from("profiles").select("id, display_name, created_at").order("display_name"),
-    supabase.from("coffees").select("user_id, scanned_at"),
+    supabase.from("coffees").select("user_id, scanned_at, price"),
     supabase.from("payments").select("user_id, amount"),
   ]);
 
@@ -36,7 +36,10 @@ export default async function AdminPage() {
       (sum, p) => sum + parseFloat(String(p.amount)),
       0
     );
-    const totalOwed = userCoffees.length * coffeePrice;
+    const totalOwed = userCoffees.reduce(
+      (sum, c) => sum + parseFloat(String(c.price)),
+      0
+    );
 
     return {
       id: profile.id,
