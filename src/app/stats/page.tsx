@@ -26,7 +26,7 @@ export default async function StatsPage({
       .single(),
     supabase
       .from("coffees")
-      .select("scanned_at")
+      .select("scanned_at, price")
       .eq("user_id", user.id)
       .order("scanned_at", { ascending: false }),
   ]);
@@ -58,16 +58,27 @@ export default async function StatsPage({
   });
 
   const totalInRange = coffees.length;
+  const totalCost = coffees.reduce(
+    (sum, c) => sum + parseFloat(String(c.price)),
+    0
+  );
 
-  const grouped: Record<string, number> = {};
+  const grouped: Record<number, { count: number; cost: number; label: string }> = {};
   coffees.forEach((c) => {
     const date = new Date(c.scanned_at);
-    const key =
+    const sortKey = selectedMonth !== null ? date.getDate() : date.getMonth();
+    const label =
       selectedMonth !== null
         ? date.toLocaleDateString("fr-FR", { day: "numeric", weekday: "short" })
         : date.toLocaleDateString("fr-FR", { month: "short" });
-    grouped[key] = (grouped[key] || 0) + 1;
+    if (!grouped[sortKey]) grouped[sortKey] = { count: 0, cost: 0, label };
+    grouped[sortKey].count += 1;
+    grouped[sortKey].cost += parseFloat(String(c.price));
   });
+
+  const sortedEntries = Object.entries(grouped)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([, v]) => v);
 
   const monthNames = [
     "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
@@ -99,18 +110,18 @@ export default async function StatsPage({
             {totalInRange}
           </div>
           <p className="text-amber-600 text-sm">
-            {totalInRange <= 1 ? "cafe" : "cafes"}
+            {totalInRange <= 1 ? "cafe" : "cafes"} &middot; {totalCost.toFixed(2)}€
           </p>
         </div>
 
-        {Object.keys(grouped).length > 0 && (
+        {sortedEntries.length > 0 && (
           <div className="bg-white rounded-xl shadow p-4 mt-4">
             <h3 className="text-amber-800 font-semibold text-sm mb-3">
               Detail
             </h3>
             <div className="space-y-2">
-              {Object.entries(grouped).map(([label, count]) => {
-                const maxCount = Math.max(...Object.values(grouped));
+              {sortedEntries.map(({ label, count, cost }) => {
+                const maxCount = Math.max(...sortedEntries.map((e) => e.count));
                 const width = maxCount > 0 ? (count / maxCount) * 100 : 0;
                 return (
                   <div key={label} className="flex items-center gap-2">
@@ -123,8 +134,8 @@ export default async function StatsPage({
                         style={{ width: `${width}%` }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-amber-900 w-6">
-                      {count}
+                    <span className="text-xs font-bold text-amber-900 w-16 text-right">
+                      {count} <span className="font-normal text-amber-500">({cost.toFixed(2)}€)</span>
                     </span>
                   </div>
                 );

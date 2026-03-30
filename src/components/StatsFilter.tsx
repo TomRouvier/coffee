@@ -6,10 +6,12 @@ export default function StatsFilter({
   currentMonth,
   currentYear,
   monthNames,
+  basePath = "/stats",
 }: {
   currentMonth: number | null;
   currentYear: number;
   monthNames: string[];
+  basePath?: string;
 }) {
   const router = useRouter();
 
@@ -17,7 +19,7 @@ export default function StatsFilter({
     const params = new URLSearchParams();
     if (month !== null) params.set("month", String(month));
     params.set("year", String(year));
-    router.push(`/stats?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   const years = [];

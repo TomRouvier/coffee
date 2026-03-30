@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import AdminUserCard from "@/components/AdminUserCard";
 import CoffeePriceForm from "@/components/CoffeePriceForm";
@@ -97,6 +98,13 @@ export default async function AdminPage() {
             </div>
           </div>
         </div>
+
+        <Link
+          href="/admin/stats"
+          className="block w-full py-3 bg-amber-100 text-amber-800 rounded-xl text-center text-sm font-medium hover:bg-amber-200 transition-colors"
+        >
+          📊 Voir les statistiques globales
+        </Link>
 
         {userStats.map((user) => (
           <AdminUserCard
