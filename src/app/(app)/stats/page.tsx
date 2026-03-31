@@ -1,46 +1,20 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
 import NavBar from "@/components/NavBar";
 import StatsFilter from "@/components/StatsFilter";
+import { useSearchParams } from "next/navigation";
+import { useData } from "@/lib/DataContext";
 
-export default async function StatsPage({
-  searchParams,
-}: {
-  searchParams: { month?: string; year?: string };
-}) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  // Fetch profile and coffees in parallel
-  const [profileRes, coffeesRes] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("display_name, is_admin")
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("coffees")
-      .select("scanned_at, price")
-      .eq("user_id", user.id)
-      .order("scanned_at", { ascending: false }),
-  ]);
-
-  const profile = profileRes.data;
-  const allCoffees = coffeesRes.data || [];
+export default function StatsPage() {
+  const { isAdmin, coffees: allCoffees } = useData();
+  const searchParams = useSearchParams();
 
   const now = new Date();
-  const selectedYear = parseInt(searchParams.year || String(now.getFullYear()));
-  const selectedMonth = searchParams.month
-    ? parseInt(searchParams.month)
+  const selectedYear = parseInt(searchParams.get("year") || String(now.getFullYear()));
+  const selectedMonth = searchParams.get("month")
+    ? parseInt(searchParams.get("month")!)
     : null;
 
-  // Filter in JS instead of extra DB query
   let startDate: Date;
   let endDate: Date;
 
@@ -152,7 +126,7 @@ export default async function StatsPage({
         )}
       </div>
 
-      <NavBar isAdmin={profile?.is_admin} />
+      <NavBar isAdmin={isAdmin} />
     </div>
   );
 }

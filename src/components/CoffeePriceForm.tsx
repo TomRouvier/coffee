@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateCoffeePrice } from "@/app/admin/actions";
+import { useData } from "@/lib/DataContext";
 
 export default function CoffeePriceForm({
   currentPrice,
@@ -11,11 +12,13 @@ export default function CoffeePriceForm({
   const [price, setPrice] = useState(currentPrice.toFixed(2));
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { refreshData } = useData();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     await updateCoffeePrice(price);
+    await refreshData();
     setSaved(true);
     setLoading(false);
     setTimeout(() => setSaved(false), 2000);
@@ -47,9 +50,6 @@ export default function CoffeePriceForm({
       >
         {saved ? "OK !" : loading ? "..." : "Modifier"}
       </button>
-      <p className="text-[10px] text-amber-400 w-full text-center mt-1">
-        Le nouveau prix s&apos;appliquera aux prochains cafes uniquement.
-      </p>
     </form>
   );
 }

@@ -1,28 +1,20 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import AdminUserCard from "@/components/AdminUserCard";
 import CoffeePriceForm from "@/components/CoffeePriceForm";
 import PaymentInfoForm from "@/components/PaymentInfoForm";
+import { useData } from "@/lib/DataContext";
 
-export default async function AdminPage() {
-  const supabase = createClient();
-
-  // Fetch everything in parallel
-  const [priceRes, paymentInfoRes, profilesRes, coffeesRes, paymentsRes] = await Promise.all([
-    supabase.from("settings").select("value").eq("key", "coffee_price").single(),
-    supabase.from("settings").select("value").eq("key", "payment_info").single(),
-    supabase.from("profiles").select("id, display_name, created_at").order("display_name"),
-    supabase.from("coffees").select("user_id, scanned_at, price"),
-    supabase.from("payments").select("user_id, amount"),
-  ]);
-
-  const paymentInfo = paymentInfoRes.data?.value || "";
-
-  const coffeePrice = parseFloat(priceRes.data?.value || "0.50");
-  const profiles = profilesRes.data || [];
-  const coffees = coffeesRes.data || [];
-  const payments = paymentsRes.data || [];
+export default function AdminPage() {
+  const {
+    coffeePrice,
+    paymentInfo,
+    allProfiles: profiles = [],
+    allCoffees: coffees = [],
+    allPayments: payments = [],
+  } = useData();
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -50,6 +42,7 @@ export default async function AdminPage() {
       totalPaid,
       totalOwed,
       balance: totalPaid - totalOwed,
+      payments: userPayments,
     };
   });
 

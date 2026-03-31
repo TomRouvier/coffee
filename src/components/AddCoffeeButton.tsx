@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { addManualCoffee } from "@/app/actions";
-import { useRouter } from "next/navigation";
+import { useData } from "@/lib/DataContext";
 
 export default function AddCoffeeButton() {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const { refreshData } = useData();
 
   async function handleClick() {
     setLoading(true);
     await addManualCoffee();
-    router.refresh();
+    await refreshData();
     setLoading(false);
   }
 
@@ -19,9 +19,9 @@ export default function AddCoffeeButton() {
     <button
       onClick={handleClick}
       disabled={loading}
-      className="mt-4 w-full py-3 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700 disabled:opacity-50 transition-colors"
+      className="w-full py-2.5 border-2 border-amber-400 text-amber-700 bg-amber-50 rounded-xl font-medium hover:bg-amber-100 disabled:opacity-50 transition-colors text-sm"
     >
-      {loading ? "..." : "+ 1 cafe (manuel)"}
+      {loading ? "..." : "+ 1 café (manuel)"}
     </button>
   );
 }

@@ -85,6 +85,20 @@ export async function recordPayment(userId: string, amount: string) {
   return { success: true };
 }
 
+export async function deletePayment(paymentId: number) {
+  const admin = await verifyAdmin();
+  if (!admin) return { error: "Non autorise" };
+
+  const supabase = createClient();
+  const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { success: true };
+}
+
 export async function resetUserCoffees(userId: string) {
   const admin = await verifyAdmin();
   if (!admin) return { error: "Non autorise" };

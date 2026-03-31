@@ -2,15 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Coffee, BarChart3, Settings, ShieldCheck, type LucideIcon } from "lucide-react";
+import { type ReactNode } from "react";
+
+function AnimatedIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
+  return (
+    <Icon
+      size={22}
+      strokeWidth={active ? 2.5 : 2}
+      className={`transition-all duration-300 ${
+        active ? "scale-110" : "group-hover:scale-110 group-hover:-translate-y-0.5"
+      }`}
+    />
+  );
+}
 
 export default function NavBar({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
 
-  const links = [
-    { href: "/", label: "Accueil", icon: "☕" },
-    { href: "/stats", label: "Stats", icon: "📊" },
-    { href: "/settings", label: "Parametres", icon: "🔧" },
-    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: "⚙️" }] : []),
+  const links: { href: string; label: string; icon: LucideIcon }[] = [
+    { href: "/", label: "Accueil", icon: Coffee },
+    { href: "/stats", label: "Stats", icon: BarChart3 },
+    { href: "/settings", label: "Parametres", icon: Settings },
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 
   return (
@@ -22,13 +36,13 @@ export default function NavBar({ isAdmin }: { isAdmin?: boolean }) {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
+              className={`group flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
                 active
                   ? "text-amber-700 bg-amber-100"
                   : "text-amber-500 hover:text-amber-700"
               }`}
             >
-              <span className="text-xl">{link.icon}</span>
+              <AnimatedIcon icon={link.icon} active={active} />
               <span className="text-xs font-medium">{link.label}</span>
             </Link>
           );

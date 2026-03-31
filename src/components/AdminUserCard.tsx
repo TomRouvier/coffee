@@ -3,10 +3,18 @@
 import { useState } from "react";
 import {
   recordPayment,
+  deletePayment,
   resetUserCoffees,
   deleteUser,
   setUserCoffeeCount,
 } from "@/app/admin/actions";
+import { useData } from "@/lib/DataContext";
+
+interface Payment {
+  id: number;
+  amount: number;
+  created_at: string;
+}
 
 interface UserStats {
   id: string;
@@ -16,6 +24,7 @@ interface UserStats {
   totalPaid: number;
   totalOwed: number;
   balance: number;
+  payments: Payment[];
 }
 
 export default function AdminUserCard({
@@ -28,16 +37,20 @@ export default function AdminUserCard({
   const [coffeeCount, setCoffeeCount] = useState(String(user.totalCount));
   const [loading, setLoading] = useState("");
   const [showPayment, setShowPayment] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [showSetCount, setShowSetCount] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
+  const { refreshData } = useData();
 
   async function handlePayment(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) return;
     setLoading("payment");
     await recordPayment(user.id, amount);
+    await refreshData();
     setAmount("");
     setShowPayment(false);
     setLoading("");
@@ -51,6 +64,7 @@ export default function AdminUserCard({
     }
     setLoading("reset");
     await resetUserCoffees(user.id);
+    await refreshData();
     setConfirmReset(false);
     setLoading("");
   }
@@ -67,14 +81,23 @@ export default function AdminUserCard({
       setError(result.error);
       setTimeout(() => setError(""), 3000);
     }
+    await refreshData();
     setConfirmDelete(false);
     setLoading("");
+  }
+
+  async function handleDeletePayment(paymentId: number) {
+    setDeletingPaymentId(paymentId);
+    await deletePayment(paymentId);
+    await refreshData();
+    setDeletingPaymentId(null);
   }
 
   async function handleSetCount(e: React.FormEvent) {
     e.preventDefault();
     setLoading("count");
     await setUserCoffeeCount(user.id, coffeeCount);
+    await refreshData();
     setShowSetCount(false);
     setLoading("");
   }
@@ -139,6 +162,37 @@ export default function AdminUserCard({
             X
           </button>
         </form>
+      )}
+
+      {/* Payment history */}
+      {user.payments.length > 0 && (
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="mt-2 w-full py-2 bg-gray-50 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
+        >
+          {showHistory ? "Masquer" : "Voir"} l&apos;historique ({user.payments.length} paiement{user.payments.length > 1 ? "s" : ""})
+        </button>
+      )}
+      {showHistory && user.payments.length > 0 && (
+        <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-2">
+          {user.payments.map((p) => (
+            <div key={p.id} className="flex justify-between items-center text-sm">
+              <span className="text-gray-500 text-xs">
+                {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-green-600">+{parseFloat(String(p.amount)).toFixed(2)}€</span>
+                <button
+                  onClick={() => handleDeletePayment(p.id)}
+                  disabled={deletingPaymentId === p.id}
+                  className="text-red-400 hover:text-red-600 text-xs disabled:opacity-50"
+                >
+                  {deletingPaymentId === p.id ? "..." : "✕"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Set total count */}

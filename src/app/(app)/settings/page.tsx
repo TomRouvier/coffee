@@ -1,25 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
 import NavBar from "@/components/NavBar";
 import ChangePasswordForm from "@/components/ChangePasswordForm";
+import LogoutButton from "@/components/LogoutButton";
+import { useData } from "@/lib/DataContext";
 
-export default async function SettingsPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, is_admin")
-    .eq("id", user.id)
-    .single();
-
-  const isAdmin = profile?.is_admin || false;
+export default function SettingsPage() {
+  const { isAdmin } = useData();
 
   return (
     <div className="min-h-screen bg-amber-50 pb-20">
@@ -31,6 +18,10 @@ export default async function SettingsPage() {
 
       <div className="max-w-md mx-auto px-4 mt-4">
         <ChangePasswordForm />
+
+        <div className="mt-6 text-center">
+          <LogoutButton />
+        </div>
       </div>
 
       <NavBar isAdmin={isAdmin} />

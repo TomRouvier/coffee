@@ -1,29 +1,23 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
 import NavBar from "@/components/NavBar";
 import StatsFilter from "@/components/StatsFilter";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useData } from "@/lib/DataContext";
 
-export default async function AdminStatsPage({
-  searchParams,
-}: {
-  searchParams: { month?: string; year?: string };
-}) {
-  const supabase = createClient();
-
-  const [profilesRes, coffeesRes, paymentsRes] = await Promise.all([
-    supabase.from("profiles").select("id, display_name").order("display_name"),
-    supabase.from("coffees").select("user_id, scanned_at, price"),
-    supabase.from("payments").select("user_id, amount, created_at"),
-  ]);
-
-  const profiles = profilesRes.data || [];
-  const allCoffees = coffeesRes.data || [];
-  const allPayments = paymentsRes.data || [];
+export default function AdminStatsPage() {
+  const {
+    allProfiles: profiles = [],
+    allCoffees: allCoffees = [],
+    allPayments: allPayments = [],
+  } = useData();
+  const searchParams = useSearchParams();
 
   const now = new Date();
-  const selectedYear = parseInt(searchParams.year || String(now.getFullYear()));
-  const selectedMonth = searchParams.month
-    ? parseInt(searchParams.month)
+  const selectedYear = parseInt(searchParams.get("year") || String(now.getFullYear()));
+  const selectedMonth = searchParams.get("month")
+    ? parseInt(searchParams.get("month")!)
     : null;
 
   let startDate: Date;
@@ -76,7 +70,6 @@ export default async function AdminStatsPage({
     .map(([, v]) => v);
 
   // User ranking
-  const userStats: { name: string; count: number; cost: number }[] = [];
   const userMap: Record<string, { name: string; count: number; cost: number }> = {};
   coffees.forEach((c) => {
     if (!userMap[c.user_id]) {
@@ -90,9 +83,7 @@ export default async function AdminStatsPage({
     userMap[c.user_id].count += 1;
     userMap[c.user_id].cost += parseFloat(String(c.price));
   });
-  Object.values(userMap)
-    .sort((a, b) => b.count - a.count)
-    .forEach((u) => userStats.push(u));
+  const userStats = Object.values(userMap).sort((a, b) => b.count - a.count);
 
   const monthNames = [
     "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",

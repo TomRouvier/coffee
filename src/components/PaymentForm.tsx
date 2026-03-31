@@ -2,18 +2,21 @@
 
 import { useState } from "react";
 import { recordOwnPayment } from "@/app/actions";
+import { useData } from "@/lib/DataContext";
 
 export default function PaymentForm({}: { userId: string }) {
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const { refreshData } = useData();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) return;
     setLoading(true);
     await recordOwnPayment(amount);
+    await refreshData();
     setAmount("");
     setSuccess(true);
     setLoading(false);

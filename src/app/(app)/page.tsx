@@ -1,75 +1,34 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
 import NavBar from "@/components/NavBar";
 import SuccessToast from "@/components/SuccessToast";
-import LogoutButton from "@/components/LogoutButton";
+
 import PaymentForm from "@/components/PaymentForm";
 import AddCoffeeButton from "@/components/AddCoffeeButton";
 import { Suspense } from "react";
+import { useData } from "@/lib/DataContext";
 
-export default async function HomePage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function HomePage() {
+  const { displayName, isAdmin, coffeePrice, paymentInfo, coffees, payments, userId } =
+    useData();
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  // Fetch everything in parallel (1 round trip instead of 6)
-  const [profileRes, priceRes, paymentInfoRes, coffeesRes, paymentsRes] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("display_name, is_admin")
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "coffee_price")
-      .single(),
-    supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "payment_info")
-      .single(),
-    supabase
-      .from("coffees")
-      .select("scanned_at, price")
-      .eq("user_id", user.id),
-    supabase
-      .from("payments")
-      .select("amount")
-      .eq("user_id", user.id),
-  ]);
-
-  const paymentInfo = paymentInfoRes.data?.value || "";
-
-  const profile = profileRes.data;
-  const displayName = profile?.display_name || user.email;
-  const isAdmin = profile?.is_admin || false;
-  const coffeePrice = parseFloat(priceRes.data?.value || "0.50");
-
-  // Compute counts from the single coffees query
-  const allCoffees = coffeesRes.data || [];
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const todayCount = allCoffees.filter(
+  const todayCount = coffees.filter(
     (c) => new Date(c.scanned_at) >= todayStart
   ).length;
-  const monthCount = allCoffees.filter(
+  const monthCount = coffees.filter(
     (c) => new Date(c.scanned_at) >= monthStart
   ).length;
-  const totalCount = allCoffees.length;
+  const totalCount = coffees.length;
 
-  const totalPaid = (paymentsRes.data || []).reduce(
+  const totalPaid = payments.reduce(
     (sum, p) => sum + parseFloat(String(p.amount)),
     0
   );
-  const totalOwed = allCoffees.reduce(
+  const totalOwed = coffees.reduce(
     (sum, c) => sum + parseFloat(String(c.price)),
     0
   );
@@ -83,12 +42,9 @@ export default async function HomePage() {
 
       {/* Header */}
       <div className="bg-gradient-to-b from-amber-600 to-amber-500 text-white px-4 pt-8 pb-12 rounded-b-3xl">
-        <div className="flex justify-between items-start max-w-md mx-auto">
-          <div>
-            <p className="text-amber-100 text-sm">Bonjour,</p>
-            <h1 className="text-2xl font-bold">{displayName}</h1>
-          </div>
-          <LogoutButton />
+        <div className="max-w-md mx-auto">
+          <p className="text-amber-100 text-sm">Bonjour,</p>
+          <h1 className="text-2xl font-bold">{displayName}</h1>
         </div>
       </div>
 
@@ -160,17 +116,36 @@ export default async function HomePage() {
         )}
 
         {/* Payment form */}
-        <PaymentForm userId={user.id} />
+        <PaymentForm userId={userId} />
 
-        {/* Manual +1 button */}
-        <AddCoffeeButton />
-
-        {/* Scan instruction */}
-        <div className="mt-4 bg-amber-100 rounded-xl p-4 text-center">
-          <p className="text-amber-800 text-sm">
-            Scanne le tag NFC pour enregistrer ton cafe !
+        {/* NFC scan + manual fallback */}
+        <div className="mt-4 bg-amber-100 rounded-2xl p-5 text-center space-y-3">
+          <p className="text-amber-900 font-semibold text-base">
+            Scanne le tag NFC pour enregistrer ton café !
           </p>
+          <p className="text-amber-600 text-xs">
+            Si vous n&apos;arrivez pas à scanner, vous pouvez ajouter manuellement :
+          </p>
+          <AddCoffeeButton />
         </div>
+
+        {/* Payment history */}
+        {payments.length > 0 && (
+          <div className="bg-white rounded-xl shadow p-4 mt-4">
+            <h2 className="text-sm font-semibold text-amber-800 mb-3">Historique des paiements</h2>
+            <div className="space-y-2">
+              {payments.map((p) => (
+                <div key={p.id} className="flex justify-between items-center text-sm border-b border-amber-50 pb-2 last:border-0 last:pb-0">
+                  <span className="text-amber-600 text-xs">
+                    {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
+                  <span className="font-semibold text-green-600">+{parseFloat(String(p.amount)).toFixed(2)}€</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
       <NavBar isAdmin={isAdmin} />

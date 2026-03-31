@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updatePaymentInfo } from "@/app/admin/actions";
+import { useData } from "@/lib/DataContext";
 
 export default function PaymentInfoForm({
   currentInfo,
@@ -11,11 +12,13 @@ export default function PaymentInfoForm({
   const [info, setInfo] = useState(currentInfo);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { refreshData } = useData();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     await updatePaymentInfo(info);
+    await refreshData();
     setSaved(true);
     setLoading(false);
     setTimeout(() => setSaved(false), 2000);
