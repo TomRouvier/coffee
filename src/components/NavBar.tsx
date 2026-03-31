@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Coffee, BarChart3, Settings, ShieldCheck, type LucideIcon } from "lucide-react";
-import { type ReactNode } from "react";
+
 
 function AnimatedIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
   return (
