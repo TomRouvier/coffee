@@ -37,23 +37,27 @@ export async function updateCoffeePrice(price: string) {
   if (error) return { error: error.message };
 
   // Notify all users (except this admin)
-  const { data: allUsers } = await supabase
-    .from("profiles")
-    .select("id");
+  try {
+    const { data: allUsers } = await supabase
+      .from("profiles")
+      .select("id");
 
-  if (allUsers && allUsers.length > 0) {
-    const notifications = allUsers
-      .filter((u) => u.id !== admin.id)
-      .map((u) => ({
-        user_id: u.id,
-        type: "price_changed",
-        message: `Le prix du cafe a ete mis a jour : ${numPrice.toFixed(2)} €`,
-        metadata: { new_price: numPrice, changed_by: admin.id },
-      }));
+    if (allUsers && allUsers.length > 0) {
+      const notifications = allUsers
+        .filter((u) => u.id !== admin.id)
+        .map((u) => ({
+          user_id: u.id,
+          type: "price_changed",
+          message: `Le prix du cafe a ete mis a jour : ${numPrice.toFixed(2)} €`,
+          metadata: { new_price: numPrice, changed_by: admin.id },
+        }));
 
-    if (notifications.length > 0) {
-      await supabase.from("notifications").insert(notifications);
+      if (notifications.length > 0) {
+        await supabase.from("notifications").insert(notifications);
+      }
     }
+  } catch {
+    // Notification failed, but price was updated successfully
   }
 
   revalidatePath("/admin");

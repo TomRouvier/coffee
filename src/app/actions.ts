@@ -46,32 +46,36 @@ export async function recordOwnPayment(amount: string, method?: string) {
 
   if (error) return { error: error.message };
 
-  // Notify admins
-  const adminSupabase = getAdminSupabase();
-  const { data: actorProfile } = await adminSupabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user.id)
-    .single();
+  // Notify admins (non-blocking: don't let notification failure break the payment)
+  try {
+    const adminSupabase = getAdminSupabase();
+    const { data: actorProfile } = await adminSupabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .single();
 
-  const { data: admins } = await adminSupabase
-    .from("profiles")
-    .select("id")
-    .eq("is_admin", true);
+    const { data: admins } = await adminSupabase
+      .from("profiles")
+      .select("id")
+      .eq("is_admin", true);
 
-  if (admins && admins.length > 0) {
-    const notifications = admins
-      .filter((a) => a.id !== user.id)
-      .map((a) => ({
-        user_id: a.id,
-        type: "payment_recorded",
-        message: `${actorProfile?.display_name || "Un utilisateur"} a enregistre un paiement de ${numAmount.toFixed(2)} €${method ? ` (${method})` : ""}`,
-        metadata: { amount: numAmount, method: method || null, payer_id: user.id },
-      }));
+    if (admins && admins.length > 0) {
+      const notifications = admins
+        .filter((a) => a.id !== user.id)
+        .map((a) => ({
+          user_id: a.id,
+          type: "payment_recorded",
+          message: `${actorProfile?.display_name || "Un utilisateur"} a enregistre un paiement de ${numAmount.toFixed(2)} €${method ? ` (${method})` : ""}`,
+          metadata: { amount: numAmount, method: method || null, payer_id: user.id },
+        }));
 
-    if (notifications.length > 0) {
-      await adminSupabase.from("notifications").insert(notifications);
+      if (notifications.length > 0) {
+        await adminSupabase.from("notifications").insert(notifications);
+      }
     }
+  } catch {
+    // Notification failed, but payment was recorded successfully
   }
 
   revalidatePath("/");
