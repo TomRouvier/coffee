@@ -55,10 +55,13 @@ export async function recordOwnPayment(amount: string, method?: string) {
       .eq("id", user.id)
       .single();
 
-    const { data: admins } = await adminSupabase
+    const { data: admins, error: adminsError } = await adminSupabase
       .from("profiles")
       .select("id")
       .eq("is_admin", true);
+
+    console.log("[recordOwnPayment] admins query:", { admins, adminsError });
+    console.log("[recordOwnPayment] SERVICE_ROLE_KEY defined:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     if (admins && admins.length > 0) {
       const notifications = admins
@@ -70,12 +73,15 @@ export async function recordOwnPayment(amount: string, method?: string) {
           metadata: { amount: numAmount, method: method || null, payer_id: user.id },
         }));
 
+      console.log("[recordOwnPayment] inserting notifications:", notifications.length);
+
       if (notifications.length > 0) {
-        await adminSupabase.from("notifications").insert(notifications);
+        const { error: notifError } = await adminSupabase.from("notifications").insert(notifications);
+        console.log("[recordOwnPayment] notification insert result:", { notifError });
       }
     }
-  } catch {
-    // Notification failed, but payment was recorded successfully
+  } catch (err) {
+    console.error("[recordOwnPayment] notification error:", err);
   }
 
   revalidatePath("/");
