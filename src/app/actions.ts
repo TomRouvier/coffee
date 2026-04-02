@@ -26,7 +26,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return { success: true };
 }
 
-export async function recordOwnPayment(amount: string) {
+export async function recordOwnPayment(amount: string, method?: string) {
   const supabase = createClient();
   const {
     data: { user },
@@ -40,6 +40,7 @@ export async function recordOwnPayment(amount: string) {
     user_id: user.id,
     amount: numAmount,
     recorded_by: user.id,
+    method: method || null,
   });
 
   if (error) return { error: error.message };

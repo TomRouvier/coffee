@@ -32,7 +32,7 @@ export async function fetchAppData(): Promise<AppData | null> {
         .eq("user_id", user.id),
       supabase
         .from("payments")
-        .select("id, amount, created_at")
+        .select("id, amount, created_at, method")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
     ]);
@@ -57,7 +57,7 @@ export async function fetchAppData(): Promise<AppData | null> {
         .select("id, display_name, created_at")
         .order("display_name"),
       supabase.from("coffees").select("user_id, scanned_at, price"),
-      supabase.from("payments").select("id, user_id, amount, created_at").order("created_at", { ascending: false }),
+      supabase.from("payments").select("id, user_id, amount, created_at, method").order("created_at", { ascending: false }),
     ]);
 
     data.allProfiles = allProfilesRes.data || [];

@@ -64,7 +64,7 @@ export async function updatePaymentInfo(info: string) {
   return { success: true };
 }
 
-export async function recordPayment(userId: string, amount: string) {
+export async function recordPayment(userId: string, amount: string, method?: string) {
   const admin = await verifyAdmin();
   if (!admin) return { error: "Non autorise" };
 
@@ -76,6 +76,7 @@ export async function recordPayment(userId: string, amount: string) {
     user_id: userId,
     amount: numAmount,
     recorded_by: admin.id,
+    method: method || null,
   });
 
   if (error) return { error: error.message };

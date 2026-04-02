@@ -14,6 +14,7 @@ interface Payment {
   id: number;
   amount: number;
   created_at: string;
+  method?: string | null;
 }
 
 interface UserStats {
@@ -33,7 +34,9 @@ export default function AdminUserCard({
   user: UserStats;
   coffeePrice?: number;
 }) {
+  const PAYMENT_METHODS = ["wero", "paypal", "revolut", "liquide"] as const;
   const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("");
   const [coffeeCount, setCoffeeCount] = useState(String(user.totalCount));
   const [loading, setLoading] = useState("");
   const [showPayment, setShowPayment] = useState(false);
@@ -43,15 +46,17 @@ export default function AdminUserCard({
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const { refreshData } = useData();
 
   async function handlePayment(e: React.FormEvent) {
     e.preventDefault();
-    if (!amount) return;
+    if (!amount || !method) return;
     setLoading("payment");
-    await recordPayment(user.id, amount);
+    await recordPayment(user.id, amount, method);
     await refreshData();
     setAmount("");
+    setMethod("");
     setShowPayment(false);
     setLoading("");
   }
@@ -104,12 +109,33 @@ export default function AdminUserCard({
 
   return (
     <div className="bg-white rounded-xl shadow p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-amber-900">{user.displayName}</h3>
-          <p className="text-xs text-amber-500">
-            Ce mois : {user.monthCount} &middot; Total : {user.totalCount} cafes
-          </p>
+      <div
+        className="flex items-center justify-between cursor-pointer select-none"
+        onClick={() => {
+          setExpanded((v) => {
+            if (v) {
+              setShowPayment(false);
+              setShowHistory(false);
+              setShowSetCount(false);
+              setConfirmReset(false);
+              setConfirmDelete(false);
+            }
+            return !v;
+          });
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className={`text-amber-400 text-xs transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+          >
+            ▶
+          </span>
+          <div>
+            <h3 className="font-semibold text-amber-900">{user.displayName}</h3>
+            <p className="text-xs text-amber-500">
+              Ce mois : {user.monthCount} &middot; Total : {user.totalCount} cafes
+            </p>
+          </div>
         </div>
         <div
           className={`text-right ${user.balance >= 0 ? "text-green-600" : "text-red-600"}`}
@@ -121,6 +147,7 @@ export default function AdminUserCard({
         </div>
       </div>
 
+      {expanded && <>
       {error && (
         <p className="mt-2 text-xs text-red-600 bg-red-50 px-3 py-1 rounded">
           {error}
@@ -136,31 +163,49 @@ export default function AdminUserCard({
           + Enregistrer un paiement
         </button>
       ) : (
-        <form onSubmit={handlePayment} className="mt-3 flex gap-2">
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Montant €"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            autoFocus
-            className="flex-1 px-3 py-2 rounded-lg border border-green-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-          />
-          <button
-            type="submit"
-            disabled={loading === "payment" || !amount}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            {loading === "payment" ? "..." : "OK"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowPayment(false)}
-            className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm"
-          >
-            X
-          </button>
+        <form onSubmit={handlePayment} className="mt-3 space-y-2">
+          <div className="flex gap-2">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Montant €"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              autoFocus
+              className="flex-1 px-3 py-2 rounded-lg border border-green-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+            />
+            <button
+              type="submit"
+              disabled={loading === "payment" || !amount || !method}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              {loading === "payment" ? "..." : "OK"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPayment(false)}
+              className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm"
+            >
+              X
+            </button>
+          </div>
+          <div className="flex gap-2">
+            {PAYMENT_METHODS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMethod(m)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
+                  method === m
+                    ? "bg-green-600 text-white"
+                    : "bg-green-50 text-green-700 hover:bg-green-100"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
         </form>
       )}
 
@@ -177,9 +222,14 @@ export default function AdminUserCard({
         <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-2">
           {user.payments.map((p) => (
             <div key={p.id} className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 text-xs">
-                {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 text-xs">
+                  {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+                {p.method && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 capitalize">{p.method}</span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-green-600">+{parseFloat(String(p.amount)).toFixed(2)}€</span>
                 <button
@@ -265,6 +315,7 @@ export default function AdminUserCard({
               : "Supprimer"}
         </button>
       </div>
+      </>}
     </div>
   );
 }

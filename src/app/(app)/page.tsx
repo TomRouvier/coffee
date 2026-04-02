@@ -136,9 +136,14 @@ export default function HomePage() {
             <div className="space-y-2">
               {payments.map((p) => (
                 <div key={p.id} className="flex justify-between items-center text-sm border-b border-amber-50 pb-2 last:border-0 last:pb-0">
-                  <span className="text-amber-600 text-xs">
-                    {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-600 text-xs">
+                      {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    {p.method && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 capitalize">{p.method}</span>
+                    )}
+                  </div>
                   <span className="font-semibold text-green-600">+{parseFloat(String(p.amount)).toFixed(2)}€</span>
                 </div>
               ))}

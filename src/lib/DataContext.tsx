@@ -10,10 +10,10 @@ export interface AppData {
   coffeePrice: number;
   paymentInfo: string;
   coffees: { scanned_at: string; price: number }[];
-  payments: { id: number; amount: number; created_at: string }[];
+  payments: { id: number; amount: number; created_at: string; method?: string | null }[];
   allProfiles?: { id: string; display_name: string; created_at: string }[];
   allCoffees?: { user_id: string; scanned_at: string; price: number }[];
-  allPayments?: { id: number; user_id: string; amount: number; created_at: string }[];
+  allPayments?: { id: number; user_id: string; amount: number; created_at: string; method?: string | null }[];
 }
 
 interface DataContextType extends AppData {
