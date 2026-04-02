@@ -9,7 +9,7 @@ export async function fetchAppData(): Promise<AppData | null> {
 
   if (!user) return null;
 
-  const [profileRes, priceRes, paymentInfoRes, coffeesRes, paymentsRes] =
+  const [profileRes, priceRes, paymentInfoRes, coffeesRes, paymentsRes, notificationsRes] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -35,6 +35,12 @@ export async function fetchAppData(): Promise<AppData | null> {
         .select("id, amount, created_at, method")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("notifications")
+        .select("id, type, message, metadata, is_read, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50),
     ]);
 
   const profile = profileRes.data;
@@ -48,6 +54,7 @@ export async function fetchAppData(): Promise<AppData | null> {
     paymentInfo: paymentInfoRes.data?.value || "",
     coffees: coffeesRes.data || [],
     payments: paymentsRes.data || [],
+    notifications: notificationsRes.data || [],
   };
 
   if (isAdmin) {

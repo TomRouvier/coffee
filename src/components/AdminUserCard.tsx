@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   recordPayment,
+  updatePayment,
   deletePayment,
   resetUserCoffees,
   deleteUser,
@@ -43,6 +44,7 @@ export default function AdminUserCard({
   const [showHistory, setShowHistory] = useState(false);
   const [showSetCount, setShowSetCount] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
+  const [editingPayment, setEditingPayment] = useState<{ id: number; amount: string; method: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
@@ -96,6 +98,16 @@ export default function AdminUserCard({
     await deletePayment(paymentId);
     await refreshData();
     setDeletingPaymentId(null);
+  }
+
+  async function handleUpdatePayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingPayment || !editingPayment.amount) return;
+    setLoading("edit");
+    await updatePayment(editingPayment.id, editingPayment.amount, editingPayment.method);
+    await refreshData();
+    setEditingPayment(null);
+    setLoading("");
   }
 
   async function handleSetCount(e: React.FormEvent) {
@@ -221,25 +233,79 @@ export default function AdminUserCard({
       {showHistory && user.payments.length > 0 && (
         <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-2">
           {user.payments.map((p) => (
-            <div key={p.id} className="flex justify-between items-center text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500 text-xs">
-                  {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-                {p.method && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 capitalize">{p.method}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-green-600">+{parseFloat(String(p.amount)).toFixed(2)}€</span>
-                <button
-                  onClick={() => handleDeletePayment(p.id)}
-                  disabled={deletingPaymentId === p.id}
-                  className="text-red-400 hover:text-red-600 text-xs disabled:opacity-50"
-                >
-                  {deletingPaymentId === p.id ? "..." : "✕"}
-                </button>
-              </div>
+            <div key={p.id}>
+              {editingPayment?.id === p.id ? (
+                <form onSubmit={handleUpdatePayment} className="space-y-2 bg-white rounded-lg p-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingPayment.amount}
+                      onChange={(e) => setEditingPayment({ ...editingPayment, amount: e.target.value })}
+                      autoFocus
+                      className="flex-1 px-2 py-1 rounded border border-green-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading === "edit" || !editingPayment.amount}
+                      className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {loading === "edit" ? "..." : "OK"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingPayment(null)}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                    >
+                      X
+                    </button>
+                  </div>
+                  <div className="flex gap-1">
+                    {PAYMENT_METHODS.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setEditingPayment({ ...editingPayment, method: m })}
+                        className={`flex-1 py-1 rounded text-[10px] font-medium transition-colors capitalize ${
+                          editingPayment.method === m
+                            ? "bg-green-600 text-white"
+                            : "bg-green-50 text-green-700 hover:bg-green-100"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </form>
+              ) : (
+                <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-xs">
+                      {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    {p.method && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 capitalize">{p.method}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-600">+{parseFloat(String(p.amount)).toFixed(2)}€</span>
+                    <button
+                      onClick={() => setEditingPayment({ id: p.id, amount: String(p.amount), method: p.method || "" })}
+                      className="text-amber-400 hover:text-amber-600 text-xs"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => handleDeletePayment(p.id)}
+                      disabled={deletingPaymentId === p.id}
+                      className="text-red-400 hover:text-red-600 text-xs disabled:opacity-50"
+                    >
+                      {deletingPaymentId === p.id ? "..." : "✕"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

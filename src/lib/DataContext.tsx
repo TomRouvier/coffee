@@ -2,6 +2,16 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import RefreshButton from "@/components/RefreshButton";
+import NotificationBell from "@/components/NotificationBell";
+
+export interface Notification {
+  id: number;
+  type: string;
+  message: string;
+  metadata: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+}
 
 export interface AppData {
   userId: string;
@@ -11,6 +21,7 @@ export interface AppData {
   paymentInfo: string;
   coffees: { scanned_at: string; price: number }[];
   payments: { id: number; amount: number; created_at: string; method?: string | null }[];
+  notifications: Notification[];
   allProfiles?: { id: string; display_name: string; created_at: string }[];
   allCoffees?: { user_id: string; scanned_at: string; price: number }[];
   allPayments?: { id: number; user_id: string; amount: number; created_at: string; method?: string | null }[];
@@ -40,6 +51,7 @@ export function DataProvider({
 
   return (
     <DataContext.Provider value={{ ...data, refreshData }}>
+      <NotificationBell />
       <RefreshButton />
       {children}
     </DataContext.Provider>

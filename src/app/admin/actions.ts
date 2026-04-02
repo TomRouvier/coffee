@@ -1,15 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-
-function getAdminSupabase() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 async function verifyAdmin() {
   const supabase = createClient();
@@ -42,6 +35,26 @@ export async function updateCoffeePrice(price: string) {
     .eq("key", "coffee_price");
 
   if (error) return { error: error.message };
+
+  // Notify all users (except this admin)
+  const { data: allUsers } = await supabase
+    .from("profiles")
+    .select("id");
+
+  if (allUsers && allUsers.length > 0) {
+    const notifications = allUsers
+      .filter((u) => u.id !== admin.id)
+      .map((u) => ({
+        user_id: u.id,
+        type: "price_changed",
+        message: `Le prix du cafe a ete mis a jour : ${numPrice.toFixed(2)} €`,
+        metadata: { new_price: numPrice, changed_by: admin.id },
+      }));
+
+    if (notifications.length > 0) {
+      await supabase.from("notifications").insert(notifications);
+    }
+  }
 
   revalidatePath("/admin");
   revalidatePath("/");
@@ -78,6 +91,26 @@ export async function recordPayment(userId: string, amount: string, method?: str
     recorded_by: admin.id,
     method: method || null,
   });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function updatePayment(paymentId: number, amount: string, method?: string) {
+  const admin = await verifyAdmin();
+  if (!admin) return { error: "Non autorise" };
+
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount <= 0) return { error: "Montant invalide" };
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("payments")
+    .update({ amount: numAmount, method: method || null })
+    .eq("id", paymentId);
 
   if (error) return { error: error.message };
 

@@ -4,6 +4,7 @@ import NavBar from "@/components/NavBar";
 import SuccessToast from "@/components/SuccessToast";
 
 import PaymentForm from "@/components/PaymentForm";
+import CopyablePaymentInfo from "@/components/CopyablePaymentInfo";
 import AddCoffeeButton from "@/components/AddCoffeeButton";
 import { Suspense } from "react";
 import { useData } from "@/lib/DataContext";
@@ -108,12 +109,7 @@ export default function HomePage() {
         </div>
 
         {/* Payment info */}
-        {paymentInfo && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mt-4 text-center">
-            <p className="text-xs text-green-600 font-medium mb-1">Comment payer</p>
-            <p className="text-sm text-green-800 whitespace-pre-line">{paymentInfo}</p>
-          </div>
-        )}
+        {paymentInfo && <CopyablePaymentInfo text={paymentInfo} />}
 
         {/* Payment form */}
         <PaymentForm userId={userId} />
