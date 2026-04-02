@@ -14,11 +14,19 @@ export default function PaymentForm({}: { userId: string }) {
   const [showForm, setShowForm] = useState(false);
   const { refreshData } = useData();
 
+  const [error, setError] = useState("");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount || !method) return;
     setLoading(true);
-    await recordOwnPayment(amount, method);
+    setError("");
+    const result = await recordOwnPayment(amount, method);
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
     await refreshData();
     setAmount("");
     setMethod("");
@@ -47,6 +55,9 @@ export default function PaymentForm({}: { userId: string }) {
       <p className="text-sm font-medium text-amber-800 mb-2">
         Enregistrer un paiement
       </p>
+      {error && (
+        <p className="text-xs text-red-600 bg-red-50 px-3 py-1 rounded mb-2">{error}</p>
+      )}
       <div className="flex gap-2">
         <input
           type="number"
