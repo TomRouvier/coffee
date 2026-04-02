@@ -24,5 +24,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  // Notifier les admins de la création du compte
+  const { data: admins } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("is_admin", true);
+
+  if (admins && admins.length > 0) {
+    await admin.from("notifications").insert(
+      admins.map((a) => ({
+        user_id: a.id,
+        type: "new_user",
+        message: `${displayName} (${email}) vient de créer un compte.`,
+      }))
+    );
+  }
+
   return NextResponse.json({ success: true });
 }
