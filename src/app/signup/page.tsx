@@ -50,6 +50,18 @@ function SignupForm() {
       return;
     }
 
+    // Auto-login immédiat après la création du compte
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      setError("Compte créé mais connexion échouée. Essayez de vous connecter.");
+      setLoading(false);
+      return;
+    }
+
     router.push(redirect);
     router.refresh();
   }

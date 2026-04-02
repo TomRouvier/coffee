@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getAdminSupabase } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export async function changePassword(currentPassword: string, newPassword: string) {
@@ -46,22 +45,18 @@ export async function recordOwnPayment(amount: string, method?: string) {
 
   if (error) return { error: error.message };
 
-  // Notify admins (non-blocking: don't let notification failure break the payment)
+  // Notify admins (non-blocking)
   try {
-    const adminSupabase = getAdminSupabase();
-    const { data: actorProfile } = await adminSupabase
+    const { data: actorProfile } = await supabase
       .from("profiles")
       .select("display_name")
       .eq("id", user.id)
       .single();
 
-    const { data: admins, error: adminsError } = await adminSupabase
+    const { data: admins } = await supabase
       .from("profiles")
       .select("id")
       .eq("is_admin", true);
-
-    console.log("[recordOwnPayment] admins query:", { admins, adminsError });
-    console.log("[recordOwnPayment] SERVICE_ROLE_KEY defined:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     if (admins && admins.length > 0) {
       const notifications = admins
@@ -73,15 +68,12 @@ export async function recordOwnPayment(amount: string, method?: string) {
           metadata: { amount: numAmount, method: method || null, payer_id: user.id },
         }));
 
-      console.log("[recordOwnPayment] inserting notifications:", notifications.length);
-
       if (notifications.length > 0) {
-        const { error: notifError } = await adminSupabase.from("notifications").insert(notifications);
-        console.log("[recordOwnPayment] notification insert result:", { notifError });
+        await supabase.from("notifications").insert(notifications);
       }
     }
-  } catch (err) {
-    console.error("[recordOwnPayment] notification error:", err);
+  } catch {
+    // Notification failed, but payment was recorded successfully
   }
 
   revalidatePath("/");

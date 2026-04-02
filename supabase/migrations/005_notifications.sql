@@ -22,3 +22,7 @@ CREATE POLICY "Users update own notifications" ON public.notifications
 
 CREATE POLICY "Authenticated users can insert notifications" ON public.notifications
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Allow any authenticated user to read admin profile ids (needed for sending notifications)
+CREATE POLICY "Users read admin profiles" ON public.profiles
+  FOR SELECT USING (is_admin = TRUE);
