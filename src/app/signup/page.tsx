@@ -33,24 +33,22 @@ function SignupForm() {
       return;
     }
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: displayName,
-        },
-      },
+    // Créer le compte via l'API admin (déjà confirmé)
+    const res = await fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, displayName }),
     });
+    const data = await res.json();
 
-    if (error) {
-      setError(error.message);
+    if (!res.ok) {
+      setError(data.error);
       setLoading(false);
       return;
     }
 
-    // Auto-login immédiat après la création du compte
+    // Auto-login immédiat
+    const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
