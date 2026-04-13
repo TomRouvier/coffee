@@ -3,6 +3,7 @@
 import NavBar from "@/components/NavBar";
 import StatsFilter from "@/components/StatsFilter";
 import Link from "next/link";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useData } from "@/lib/DataContext";
 
@@ -13,6 +14,7 @@ export default function AdminStatsPage() {
     allPayments: allPayments = [],
   } = useData();
   const searchParams = useSearchParams();
+  const [selectedDayKey, setSelectedDayKey] = useState<number | null>(null);
 
   const now = new Date();
   const selectedYear = parseInt(searchParams.get("year") || String(now.getFullYear()));
@@ -67,7 +69,7 @@ export default function AdminStatsPage() {
 
   const sortedEntries = Object.entries(grouped)
     .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([, v]) => v);
+    .map(([k, v]) => ({ ...v, dayKey: Number(k) }));
 
   // User ranking
   const userMap: Record<string, { name: string; count: number; cost: number }> = {};
@@ -164,29 +166,72 @@ export default function AdminStatsPage() {
             <h3 className="text-amber-800 font-semibold text-sm mb-3">
               Consommation {selectedMonth ? "par jour" : "par mois"}
             </h3>
-            <div className="space-y-2">
-              {sortedEntries.map(({ label, count, cost }) => {
+            <div className="space-y-1">
+              {sortedEntries.map(({ label, count, cost, dayKey }) => {
                 const maxCount = Math.max(
                   ...sortedEntries.map((e) => e.count)
                 );
                 const width = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                const isSelected = selectedMonth !== null && selectedDayKey === dayKey;
+
+                const dayCoffees = selectedMonth !== null && isSelected
+                  ? coffees
+                      .filter((c) => new Date(c.scanned_at).getDate() === dayKey)
+                      .map((c) => ({
+                        ...c,
+                        name: profiles.find((p) => p.id === c.user_id)?.display_name || "?",
+                        time: new Date(c.scanned_at).toLocaleTimeString("fr-FR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }),
+                      }))
+                      .sort((a, b) => new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime())
+                  : [];
+
                 return (
-                  <div key={label} className="flex items-center gap-2">
-                    <span className="text-xs text-amber-700 w-16 text-right shrink-0">
-                      {label}
-                    </span>
-                    <div className="flex-1 bg-amber-100 rounded-full h-5 overflow-hidden">
-                      <div
-                        className="bg-amber-500 h-full rounded-full transition-all"
-                        style={{ width: `${width}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-bold text-amber-900 w-16 text-right">
-                      {count}{" "}
-                      <span className="font-normal text-amber-500">
-                        ({cost.toFixed(2)}€)
+                  <div key={label}>
+                    <div
+                      className={`flex items-center gap-2 rounded-lg py-1 px-1 -mx-1 transition-colors ${
+                        selectedMonth !== null
+                          ? "cursor-pointer hover:bg-amber-50 active:bg-amber-100"
+                          : ""
+                      } ${isSelected ? "bg-amber-50" : ""}`}
+                      onClick={() => {
+                        if (selectedMonth !== null) {
+                          setSelectedDayKey(isSelected ? null : dayKey);
+                        }
+                      }}
+                    >
+                      <span className="text-xs text-amber-700 w-16 text-right shrink-0">
+                        {label}
                       </span>
-                    </span>
+                      <div className="flex-1 bg-amber-100 rounded-full h-5 overflow-hidden">
+                        <div
+                          className="bg-amber-500 h-full rounded-full transition-all"
+                          style={{ width: `${width}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-amber-900 w-16 text-right">
+                        {count}{" "}
+                        <span className="font-normal text-amber-500">
+                          ({cost.toFixed(2)}€)
+                        </span>
+                      </span>
+                    </div>
+
+                    {isSelected && (
+                      <div className="mx-1 mb-2 mt-1 bg-amber-50 border border-amber-200 rounded-lg overflow-hidden">
+                        {dayCoffees.map((c, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between px-3 py-1.5 border-b border-amber-100 last:border-0"
+                          >
+                            <span className="text-xs font-medium text-amber-900">{c.name}</span>
+                            <span className="text-xs text-amber-500">{c.time}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
