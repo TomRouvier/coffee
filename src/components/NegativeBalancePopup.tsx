@@ -1,25 +1,25 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function NegativeBalancePopup({ balance }: { balance: number }) {
   const searchParams = useSearchParams();
-  const toast = searchParams.get("toast");
+  const initialToast = useRef(searchParams.get("toast"));
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (toast === "success" && balance < 0) {
+    if (initialToast.current === "success" && balance < 0) {
       const timer = setTimeout(() => setVisible(true), 1500);
       return () => clearTimeout(timer);
     }
-  }, [toast, balance]);
+  }, [balance]);
 
   if (!visible) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center animate-bounce-once">
+      <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">
         <div className="text-5xl mb-3">&#9888;&#65039;</div>
         <h2 className="text-lg font-bold text-red-600 mb-2">Solde negatif !</h2>
         <p className="text-amber-800 text-sm mb-1">
