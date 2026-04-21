@@ -6,6 +6,7 @@ import SuccessToast from "@/components/SuccessToast";
 import PaymentForm from "@/components/PaymentForm";
 import CopyablePaymentInfo from "@/components/CopyablePaymentInfo";
 import AddCoffeeButton from "@/components/AddCoffeeButton";
+import NegativeBalancePopup from "@/components/NegativeBalancePopup";
 import { Suspense } from "react";
 import { useData } from "@/lib/DataContext";
 
@@ -39,6 +40,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-amber-50 pb-20">
       <Suspense>
         <SuccessToast />
+        <NegativeBalancePopup balance={balance} />
       </Suspense>
 
       {/* Header */}
